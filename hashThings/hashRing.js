@@ -17,7 +17,7 @@ var ring = function (maxNodes, realNodes) {
     this.nodes = [];
     this.maxNodes = maxNodes;
     this.realNodes = realNodes;
- 
+    this.realNodesSet={};
     this.generate();
 };
 ring.compareNode = function (nodeA, nodeB) {
@@ -35,13 +35,23 @@ ring.hashCode = function (str) {
     }
     return  (hash & INT_MAX);
 };
+ring.prototype.getRealNearActiveNode = function(realIndex){
+    var activeNodes = (Array)(this.realNodes).filter((node)=>node!="")
+    if(activeNodes.length>0){
+        for(var i= realIndex;i<this.realNodes.length;i++){
+            if(this.realNodes[i]) return this.realNodes[i]
+        }
+    }else return ""
+}
+
 ring.prototype.generate = function () {
     var realLength = this.realNodes.length;
     this.nodes.splice(0); //clear all
  
     for (var i = 0; i < this.maxNodes; i++) {
         var realIndex = Math.floor(i / this.maxNodes * realLength);
-        var realNode = this.realNodes[realIndex];
+        var realNode = this.getRealNearActiveNode(realIndex);
+        if(!realNode) break;
         var label = realNode.address + '#' +
             (i - realIndex * Math.floor(this.maxNodes / realLength));
         var virtualNode = ring.hashCode(label);
@@ -79,19 +89,34 @@ ring.prototype.add = function (node) {
 ring.prototype.remove = function (node) {
     var realLength = this.realNodes.length;
     var idx = 0;
-    for (var i = realLength; i--;) {
+    for (var i = 0;i<realLength; i++) {
         var realNode = this.realNodes[i];
         if (ring.compareNode(realNode, node)) {
-            this.realNodes.splice(i, 1);
+            this.realNodes.splice(i, 1,"");
             idx = i;
             break;
         }
     }
     this.generate();
 };
+
+//该方法不新增点只修复坏了的点 这样不会影响其他真实节点对于虚拟节点的映射
+ring.prototype.add =function(node){
+    var realLength = this.realNodes.length;
+    var idx = 0;
+    for (var i = 0;i<realLength; i++) {
+        if(this.realNodes[i] ==""){
+            this.realNodes[i] = node;
+            break;
+        }
+    }
+}
+
 ring.prototype.toString = function () {
     return JSON.stringify(this.nodes);
 };
- 
+
+
+
 module.exports.node = node;
 module.exports.ring = ring;

@@ -18,10 +18,16 @@ var hashingRing = new ring(32, nodes);
 module.exports = hashingRing;
 module.exports.openClient = function (id) {
     var node = hashingRing.select(id);
-    var client = require('redis').createClient(node.port, node.address);
-    client.on('error', function (err) {
-        console.log('error: ' + err);
-    });
+    var client
+    if(!hashingRing.realNodesSet[node.address+node.port]){
+        client = require('redis').createClient(node.port, node.address);
+        hashingRing.realNodesSet[node.address+node.port] = client
+        client.on('error', function (err) {
+            console.log('error: ' + err);
+        });
+    }else{
+        client = hashingRing.realNodesSet[node.address+node.port];
+    }
     return client;
 };
 module.exports.hgetRedis = function (id, key, callback) {
@@ -29,8 +35,8 @@ module.exports.hgetRedis = function (id, key, callback) {
     client.hget(id, key, function (err, reply) {
         if (err)
             console.log('hget error:' + err);
-        client.quit();
-        callback.call(, err, reply);
+        //client.quit();
+        callback.call(null, err, reply);
     });
 };
 module.exports.hsetRedis = function (id, key, val, callback) {
@@ -39,9 +45,9 @@ module.exports.hsetRedis = function (id, key, val, callback) {
         if (err)
             console.log('hset ' + key + 'error: ' + err);
         console.log('hset [' + key + ']:[' + val + '] reply is:' + reply);
-        client.quit();
+       // client.quit();
  
-        callback.call(, err, reply);
+        callback.call(null, err, reply);
     });
 };
 module.exports.hdelRedis = function(id, key, callback){
@@ -49,7 +55,7 @@ module.exports.hdelRedis = function(id, key, callback){
     client.hdel(id, key, function (err, reply) {
         if (err)
             console.log('hdel error:' + err);
-        client.quit();
-        callback.call(, err, reply);
+       // client.quit();
+        callback.call(null, err, reply);
     });
 };
